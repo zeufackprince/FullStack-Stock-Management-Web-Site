@@ -1,0 +1,4 @@
+-------------------------------------------------------------------------------
+Test set: com.depot_Bar.depot_bar.DepotBarApplicationTests
+-------------------------------------------------------------------------------
+Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 44.61 s -- in com.depot_Bar.depot_bar.DepotBarApplicationTests
