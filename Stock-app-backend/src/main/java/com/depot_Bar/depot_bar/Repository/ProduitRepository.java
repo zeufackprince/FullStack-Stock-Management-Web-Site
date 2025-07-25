@@ -8,5 +8,5 @@ import com.depot_Bar.depot_bar.Models.Produits;
 
 public interface ProduitRepository extends JpaRepository<Produits, Long>{
 
-    Produits  findByNom(String nom);
+    Produits  findByName(String name);
 }

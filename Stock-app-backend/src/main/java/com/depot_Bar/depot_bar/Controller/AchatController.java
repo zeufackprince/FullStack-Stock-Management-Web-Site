@@ -3,7 +3,6 @@ package com.depot_Bar.depot_bar.Controller;
 import java.util.List;
 
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -18,7 +17,6 @@ import lombok.AllArgsConstructor;
 
 @RestController
 @RequestMapping("/api/achat")
-@CrossOrigin(origins = "*", maxAge = 3600)
 @AllArgsConstructor
 public class AchatController {
 

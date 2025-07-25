@@ -1,5 +1,6 @@
 package com.depot_Bar.depot_bar.Models;
 
+import java.time.LocalDateTime;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -37,7 +38,16 @@ public class Produits {
     private String description;
 
     @Column(name = "min_quantity", nullable = true)
+    private int minQuantity;
+
+    @Column(name = "designation", nullable = true)
     private String designation;
+
+    @Column(name = "created_at", nullable = false)
+    private LocalDateTime createdAt;
+
+    @Column(name = "updated_at", nullable = true)
+    private LocalDateTime updatedAt;
 
     @ManyToOne
     private Vente vente;

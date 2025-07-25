@@ -27,5 +27,5 @@ public class ProduitDto {
 
     private String designation;
     
-
+    private String minQuantity;
 }

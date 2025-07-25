@@ -13,7 +13,6 @@ import lombok.AllArgsConstructor;
 import java.util.List;
 
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -24,7 +23,6 @@ import org.springframework.web.bind.annotation.RequestBody;
 
 @RestController
 @RequestMapping("/api")
-@CrossOrigin
 @AllArgsConstructor
 public class ProduitController {
 
@@ -32,17 +30,17 @@ public class ProduitController {
 
     private final ProduitRepository produitRepository;
 
-    @PostMapping("/produit/creat")
+    @PostMapping("/produit/create")
     public ProduitDto newproduit(@RequestBody ProduitDto produits){
 
         ProduitDto res = new ProduitDto();
         if(produits.getName() == null || produits.getQuantity() <= 0 || produits.getUnitPrice() <= 0){
 
             res.setMessage("Error invalide entry" );
-            
+            res.setCode(400);
 
         }else{
-            res =  this.produitService.newproduit(produits.getName(), produits.getQuantity(), produits.getUnitPrice());
+            res =  this.produitService.newproduit(produits);
         }
         
 

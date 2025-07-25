@@ -21,7 +21,6 @@ import lombok.AllArgsConstructor;
 
 @RestController
 @RequestMapping("/api/vente")
-@CrossOrigin(origins = "*", maxAge = 3600)
 @AllArgsConstructor
 public class VenteController {
 
