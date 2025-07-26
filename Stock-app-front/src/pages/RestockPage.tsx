@@ -1,48 +1,21 @@
 import React, { useState, useMemo } from 'react';
-import { Plus, Search, Truck, Trash2, Package, AlertTriangle } from 'lucide-react';
+import { useStock } from '../context/StockContext';
+import { Plus, Search, Truck, Trash2, AlertTriangle } from 'lucide-react';
 import Button from '../components/Button';
 import Modal from '../components/Modal';
-import { RestockItem } from '../types';
-import { createRestock, getAllRestocks } from '../utils/ApiFunction';
+import { RestockItem, Product } from '../utils/ApiFunction';
 
 const RestockPage: React.FC = () => {
-  const [products, setProducts] = useState([]); // You may want to fetch products from backend if needed
-  const [restocks, setRestocks] = useState([]);
+  const { products, restocks, addRestock, getLowStockProducts, fetchRestocks, fetchProducts } = useStock();
   const [isNewRestockModalOpen, setIsNewRestockModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  // Fetch restocks from backend
-  React.useEffect(() => {
-    setLoading(true);
-    getAllRestocks()
-      .then(setRestocks)
-      .catch(err => setError(err.message))
-      .finally(() => setLoading(false));
-  }, []);
-
-  // Add restock
-  const handleAddRestock = async (data: any) => {
-    setLoading(true);
-    try {
-      await createRestock(data);
-      const updated = await getAllRestocks();
-      setRestocks(updated);
-      setIsNewRestockModalOpen(false);
-    } catch (err: any) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const filteredRestocks = useMemo(() => {
     if (!searchTerm) return restocks;
     
     return restocks.filter(restock =>
       restock.items.some(item =>
-        item.productName.toLowerCase().includes(searchTerm.toLowerCase())
+        item.name.toLowerCase().includes(searchTerm.toLowerCase())
       )
     );
   }, [restocks, searchTerm]);
@@ -172,7 +145,7 @@ const RestockPage: React.FC = () => {
                         <div className="space-y-1">
                           {restock.items.slice(0, 2).map((item, index) => (
                             <div key={index} className="text-sm text-white">
-                              {item.productName} <span className="text-green-400">+{item.quantity}</span>
+                              {item.name} <span className="text-green-400">+{item.quantity}</span>
                             </div>
                           ))}
                           {restock.items.length > 2 && (
@@ -187,10 +160,10 @@ const RestockPage: React.FC = () => {
                       </td>
                       <td className="px-6 py-4">
                         <div className="text-sm text-white">
-                          {new Date(restock.timestamp).toLocaleDateString()}
+                          {new Date(restock.date ?? '').toLocaleDateString()}
                         </div>
                         <div className="text-xs text-gray-400">
-                          {new Date(restock.timestamp).toLocaleTimeString()}
+                          {new Date(restock.date ?? '').toLocaleTimeString()}
                         </div>
                       </td>
                     </tr>
@@ -213,12 +186,21 @@ const RestockPage: React.FC = () => {
           )}
         </div>
 
-        {/* Add/Edit Restock Modal */}
-        <RestockModal
-          isOpen={isNewRestockModalOpen}
-          onClose={() => setIsNewRestockModalOpen(false)}
-          onSave={handleAddRestock}
-        />
+        {/* New Restock Modal */}
+        {isNewRestockModalOpen && (
+          <NewRestockModal
+            isOpen={isNewRestockModalOpen}
+            onClose={() => setIsNewRestockModalOpen(false)}
+            products={products}
+            lowStockProducts={lowStockProducts}
+            onSave={async (restockData) => {
+              await addRestock(restockData);
+              await fetchRestocks();
+              await fetchProducts();
+              setIsNewRestockModalOpen(false);
+            }}
+          />
+        )}
       </div>
     </div>
   );
@@ -250,12 +232,8 @@ const StatCard: React.FC<{
   );
 };
 
-const RestockModal: React.FC<{
-  isOpen: boolean;
-  onClose: () => void;
-  onSave: (items: RestockItem[]) => void;
-}> = ({ isOpen, onClose, onSave }) => {
-  const [restockItems, setRestockItems] = useState<RestockItem[]>([]);
+export const NewRestockModal: React.FC<{ isOpen: boolean; onClose: () => void; products: Product[]; lowStockProducts: Product[]; onSave: (restock: RestockItem) => void; }> = ({ isOpen, onClose, products, lowStockProducts, onSave }) => {
+  const [restockItems, setRestockItems] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [showLowStockOnly, setShowLowStockOnly] = useState(false);
 
@@ -263,12 +241,12 @@ const RestockModal: React.FC<{
     product.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const addItem = (product: any) => {
-    const existingItem = restockItems.find(item => item.productId === product.id);
+  const addItem = (product: Product) => {
+    const existingItem = restockItems.find(item => item.name === product.name);
     if (existingItem) {
       setRestockItems(prev =>
         prev.map(item =>
-          item.productId === product.id
+          item.name === product.name
             ? { ...item, quantity: item.quantity + 1 }
             : item
         )
@@ -277,32 +255,34 @@ const RestockModal: React.FC<{
       setRestockItems(prev => [
         ...prev,
         {
-          productId: product.id,
-          productName: product.name,
+          name: product.name,
           quantity: 1,
-          unitPrice: product.price,
         },
       ]);
     }
   };
 
-  const updateItemQuantity = (productId: string, quantity: number) => {
+  const updateItemQuantity = (name: string, quantity: number) => {
     setRestockItems(prev =>
       prev.map(item =>
-        item.productId === productId
+        item.name === name
           ? { ...item, quantity: Math.max(1, quantity) }
           : item
       )
     );
   };
 
-  const removeItem = (productId: string) => {
-    setRestockItems(prev => prev.filter(item => item.productId !== productId));
+  const removeItem = (name: string) => {
+    setRestockItems(prev => prev.filter(item => item.name !== name));
   };
 
   const handleSave = () => {
     if (restockItems.length === 0) return;
-    onSave(restockItems);
+    onSave({
+      id: Date.now(),
+      items: restockItems,
+      date: new Date().toISOString(),
+    });
     setRestockItems([]);
     setSearchTerm('');
     setShowLowStockOnly(false);
@@ -331,15 +311,13 @@ const RestockModal: React.FC<{
                 size="sm"
                 onClick={() => {
                   lowStockProducts.forEach(product => {
-                    const suggestedQuantity = Math.max(10, product.minQuantity * 2);
-                    if (!restockItems.find(item => item.productId === product.id)) {
+                    const suggestedQuantity = Math.max(10, product.minQuantity ? product.minQuantity * 2 : 10);
+                    if (!restockItems.find(item => item.name === product.name)) {
                       setRestockItems(prev => [
                         ...prev,
                         {
-                          productId: product.id,
-                          productName: product.name,
+                          name: product.name,
                           quantity: suggestedQuantity,
-                          unitPrice: product.price,
                         },
                       ]);
                     }
@@ -354,9 +332,7 @@ const RestockModal: React.FC<{
 
         {/* Product Search */}
         <div>
-          <label className="block text-sm font-medium text-gray-300 mb-2">
-            Add Products to Restock
-          </label>
+          <label className="block text-sm font-medium text-gray-300 mb-2">Add Products to Restock</label>
           <div className="flex gap-2 mb-2">
             <div className="flex-1 relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
@@ -375,14 +351,13 @@ const RestockModal: React.FC<{
               {showLowStockOnly ? 'Show All' : 'Low Stock Only'}
             </Button>
           </div>
-          
           {searchTerm && (
             <div className="mt-2 max-h-48 overflow-y-auto bg-gray-800 border border-gray-700 rounded-lg">
               {filteredProducts.slice(0, 5).map(product => {
-                const isLowStock = lowStockProducts.some(p => p.id === product.id);
+                const isLowStock = lowStockProducts.some(p => p.name === product.name);
                 return (
                   <button
-                    key={product.id}
+                    key={product.name}
                     onClick={() => addItem(product)}
                     className="w-full px-4 py-3 text-left hover:bg-gray-700 transition-colors border-b border-gray-700 last:border-b-0"
                   >
@@ -392,9 +367,7 @@ const RestockModal: React.FC<{
                           <span className="text-white font-medium">{product.name}</span>
                           {isLowStock && <AlertTriangle className="w-4 h-4 text-red-400" />}
                         </div>
-                        <div className="text-gray-400 text-sm">
-                          Current: {product.quantity} • Min: {product.minQuantity}
-                        </div>
+                        <div className="text-gray-400 text-sm">Current: {product.quantity} 2 Min: {product.minQuantity}</div>
                       </div>
                       <Plus className="w-4 h-4 text-cyan-400" />
                     </div>
@@ -402,9 +375,7 @@ const RestockModal: React.FC<{
                 );
               })}
               {filteredProducts.length === 0 && (
-                <div className="px-4 py-3 text-gray-400 text-center">
-                  No products found
-                </div>
+                <div className="px-4 py-3 text-gray-400 text-center">No products found</div>
               )}
             </div>
           )}
@@ -413,55 +384,28 @@ const RestockModal: React.FC<{
         {/* Restock Items */}
         {restockItems.length > 0 && (
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">
-              Items to Restock
-            </label>
+            <label className="block text-sm font-medium text-gray-300 mb-2">Items to Restock</label>
             <div className="space-y-2">
               {restockItems.map(item => {
-                const product = products.find(p => p.id === item.productId);
-                const isLowStock = lowStockProducts.some(p => p.id === item.productId);
+                const product = products.find(p => p.name === item.name);
+                const isLowStock = lowStockProducts.some(p => p.name === item.name);
                 return (
-                  <div key={item.productId} className="flex items-center justify-between p-4 bg-gray-800 border border-gray-700 rounded-lg">
+                  <div key={item.name} className="flex items-center justify-between p-4 bg-gray-800 border border-gray-700 rounded-lg">
                     <div className="flex-1">
                       <div className="flex items-center gap-2">
-                        <span className="text-white font-medium">{item.productName}</span>
+                        <span className="text-white font-medium">{item.name}</span>
                         {isLowStock && <AlertTriangle className="w-4 h-4 text-red-400" />}
                       </div>
-                      <div className="text-gray-400 text-sm">
-                        Current: {product?.quantity} • Will be: {product ? product.quantity + item.quantity : item.quantity}
-                      </div>
+                      <div className="text-gray-400 text-sm">Current: {product?.quantity} 2 Will be: {product ? product.quantity + item.quantity : item.quantity}</div>
                     </div>
                     <div className="flex items-center space-x-3">
                       <div className="flex items-center space-x-2">
-                        <button
-                          onClick={() => updateItemQuantity(item.productId, item.quantity - 1)}
-                          className="w-8 h-8 bg-gray-700 hover:bg-gray-600 rounded text-white flex items-center justify-center"
-                        >
-                          -
-                        </button>
-                        <input
-                          type="number"
-                          value={item.quantity}
-                          onChange={(e) => updateItemQuantity(item.productId, parseInt(e.target.value) || 1)}
-                          min={1}
-                          className="w-16 px-2 py-1 bg-gray-700 border border-gray-600 rounded text-center text-white"
-                        />
-                        <button
-                          onClick={() => updateItemQuantity(item.productId, item.quantity + 1)}
-                          className="w-8 h-8 bg-gray-700 hover:bg-gray-600 rounded text-white flex items-center justify-center"
-                        >
-                          +
-                        </button>
+                        <button onClick={() => updateItemQuantity(item.name, item.quantity - 1)} className="w-8 h-8 bg-gray-700 hover:bg-gray-600 rounded text-white flex items-center justify-center">-</button>
+                        <input type="number" value={item.quantity} onChange={(e) => updateItemQuantity(item.name, parseInt(e.target.value) || 1)} min={1} className="w-16 px-2 py-1 bg-gray-700 border border-gray-600 rounded text-center text-white" />
+                        <button onClick={() => updateItemQuantity(item.name, item.quantity + 1)} className="w-8 h-8 bg-gray-700 hover:bg-gray-600 rounded text-white flex items-center justify-center">+</button>
                       </div>
-                      <div className="text-green-400 font-medium w-16 text-right">
-                        +{item.quantity}
-                      </div>
-                      <button
-                        onClick={() => removeItem(item.productId)}
-                        className="text-red-400 hover:text-red-300 p-1"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                      <div className="text-green-400 font-medium w-16 text-right">+{item.quantity}</div>
+                      <button onClick={() => removeItem(item.name)} className="text-red-400 hover:text-red-300 p-1"><Trash2 className="w-4 h-4" /></button>
                     </div>
                   </div>
                 );
@@ -472,15 +416,8 @@ const RestockModal: React.FC<{
 
         {/* Actions */}
         <div className="flex justify-end space-x-4">
-          <Button variant="secondary" onClick={handleClose}>
-            Cancel
-          </Button>
-          <Button
-            onClick={handleSave}
-            disabled={restockItems.length === 0}
-          >
-            Complete Restock
-          </Button>
+          <Button variant="secondary" onClick={handleClose}>Cancel</Button>
+          <Button onClick={handleSave} disabled={restockItems.length === 0}>Complete Restock</Button>
         </div>
       </div>
     </Modal>

@@ -28,15 +28,8 @@ public class Vente {
 
     @Column(name = "dateVente", nullable = false)
     private LocalDate date;
-    
-    // @Column(name = "Quantite", nullable = false )
-    // private Integer Qte;
 
     @OneToMany(mappedBy = "vente", cascade = CascadeType.ALL)
     private List<VenteItem> items;
-
-    // @OneToMany
-    // private List<Produits> listproduits;
-
 
 }

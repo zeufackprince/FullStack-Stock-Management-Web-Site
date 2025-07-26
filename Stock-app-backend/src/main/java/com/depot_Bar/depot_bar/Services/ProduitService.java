@@ -209,6 +209,7 @@ public class ProduitService {
         res.setId(prod.getId());
         res.setName(prod.getName());
         res.setDescription(prod.getDescription());
+        res.setMinQuantity(prod.getMinQuantity());
         res.setDesignation(prod.getDesignation());
         res.setQuantity(prod.getQuantity());
         res.setUnitPrice(prod.getUnitPrice());
@@ -228,6 +229,7 @@ public class ProduitService {
         res.setId(prod.getId());
         res.setName(prod.getName());
         res.setQuantity(prod.getQuantity());
+        res.setMinQuantity(prod.getMinQuantity());
         res.setDescription(prod.getDescription());
         res.setDesignation(prod.getDesignation());
         res.setUnitPrice(prod.getUnitPrice());
@@ -240,8 +242,12 @@ public class ProduitService {
         return proReop.saveAll(produits);
     }
 
-    public void ajouterQuantite(Long produitId, int quantite) {
-        Produits p = proReop.findById(produitId).orElseThrow();
+    public void ajouterQuantite(String name, int quantite) {
+        Produits p = proReop.findByName(name);
+        if (p == null) {
+            throw new RuntimeException("Produit non trouvé");
+        }
+        
         p.setQuantity(p.getQuantity() + quantite);
         proReop.save(p);
     }

@@ -1,73 +1,52 @@
 import React, { useState, useMemo } from 'react';
-import { Plus, Search, Download, Calendar, ShoppingCart, Trash2, FileText } from 'lucide-react';
+import { useStock } from '../context/StockContext';
+import { Plus, Search, Download, Calendar, ShoppingCart, Trash2, FileText, ChevronDown, ChevronUp } from 'lucide-react';
 import Button from '../components/Button';
 import Input from '../components/Input';
 import Modal from '../components/Modal';
-import { SaleItem } from '../types';
+import { SaleItem, Product } from '../utils/ApiFunction';
 import { generatePDF } from '../utils/pdfGenerator';
-import { createSale, getAllSales, getSaleById, getSalesByDate } from '../utils/ApiFunction';
 
 const SalesPage: React.FC = () => {
-  const [products, setProducts] = useState([]); // You may want to fetch products from backend if needed
-  const [sales, setSales] = useState([]);
+  const { products, sales, addSale, fetchSales, fetchProducts } = useStock();
   const [isNewSaleModalOpen, setIsNewSaleModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [dateFilter, setDateFilter] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  // Fetch sales from backend
-  React.useEffect(() => {
-    setLoading(true);
-    getAllSales()
-      .then(setSales)
-      .catch(err => setError(err.message))
-      .finally(() => setLoading(false));
-  }, []);
-
-  // Add sale
-  const handleAddSale = async (data: any) => {
-    setLoading(true);
-    try {
-      await createSale(data);
-      const updated = await getAllSales();
-      setSales(updated);
-      setIsNewSaleModalOpen(false);
-    } catch (err: any) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const filteredSales = useMemo(() => {
     let filtered = sales;
-
     if (searchTerm) {
       filtered = filtered.filter(sale =>
-        sale.items.some(item =>
-          item.productName.toLowerCase().includes(searchTerm.toLowerCase())
+        sale.items && sale.items.some(item =>
+          item.name && item.name.toLowerCase().includes(searchTerm.toLowerCase())
         )
       );
     }
-
     if (dateFilter) {
       const filterDate = new Date(dateFilter);
       filtered = filtered.filter(sale => {
+        if (!sale.timestamp) return false;
         const saleDate = new Date(sale.timestamp);
         return saleDate.toDateString() === filterDate.toDateString();
       });
     }
-
     return filtered;
   }, [sales, searchTerm, dateFilter]);
 
-  const totalRevenue = sales.reduce((sum, sale) => sum + sale.totalAmount, 0);
+  // Track expanded rows for sales table
+  const [expandedRows, setExpandedRows] = useState<{ [key: string]: boolean }>({});
+  const toggleRow = (id: string) => {
+    setExpandedRows(prev => ({ ...prev, [id]: !prev[id] }));
+  };
+
+  const totalRevenue = sales.reduce((sum, sale) => sum + (sale.totalAmount ?? 0), 0);
   const todaySales = sales.filter(sale => {
+    if (!sale.timestamp) return false;
     const today = new Date();
     const saleDate = new Date(sale.timestamp);
     return saleDate.toDateString() === today.toDateString();
   });
+  const todayGain = todaySales.reduce((sum, sale) => sum + (sale.totalAmount ?? 0), 0);
 
   return (
     <div className="min-h-screen bg-gray-900 py-8">
@@ -141,83 +120,92 @@ const SalesPage: React.FC = () => {
           </div>
         </div>
 
+        {/* Today's Gain Grid */}
+        <div className="bg-gray-900 rounded-xl border border-cyan-500/30 p-6 mb-8">
+          <h2 className="text-xl font-bold text-cyan-400 mb-2">Today's Gain</h2>
+          <div className="text-3xl font-bold text-white">${todayGain.toFixed(2)}</div>
+        </div>
+
         {/* Sales Table */}
         <div className="bg-gray-800 rounded-xl border border-gray-700 overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead className="bg-gray-900">
                 <tr>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
-                    Sale ID
-                  </th>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
-                    Items
-                  </th>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
-                    Total Quantity
-                  </th>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
-                    Total Amount
-                  </th>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
-                    Date
-                  </th>
-                  <th className="px-6 py-4 text-right text-xs font-medium text-gray-400 uppercase tracking-wider">
-                    Actions
-                  </th>
+                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Sale ID</th>
+                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Items</th>
+                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Total Quantity</th>
+                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Total Amount</th>
+                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Date</th>
+                  <th className="px-6 py-4 text-right text-xs font-medium text-gray-400 uppercase tracking-wider">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-700">
-                {filteredSales.map((sale) => {
-                  const totalQuantity = sale.items.reduce((sum, item) => sum + item.quantity, 0);
-                  return (
-                    <tr key={sale.id} className="hover:bg-gray-700/50 transition-colors">
-                      <td className="px-6 py-4">
-                        <span className="text-sm font-mono text-cyan-400">#{sale.id}</span>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="space-y-1">
-                          {sale.items.slice(0, 2).map((item, index) => (
-                            <div key={index} className="text-sm text-white">
-                              {item.productName} x{item.quantity}
+                {filteredSales.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="text-center py-8 text-gray-400">
+                      No available sales yet or network error.
+                    </td>
+                  </tr>
+                ) : (
+                  filteredSales.filter(sale => typeof sale.id === 'string' && sale.id !== '').map((sale) => {
+                    const totalQuantity = sale.items ? sale.items.reduce((sum, item) => sum + item.quantity, 0) : 0;
+                    return (
+                      <React.Fragment key={sale.id}>
+                        <tr className="hover:bg-gray-700/50 transition-colors">
+                          <td className="px-6 py-4">
+                            <span className="text-sm font-mono text-cyan-400">#{sale.id}</span>
+                          </td>
+                          <td className="px-6 py-4">
+                            <div className="space-y-1">
+                              {sale.items && sale.items.slice(0, 2).map((item, index) => (
+                                <div key={index} className="text-sm text-white">
+                                  {item.name} x{item.quantity}
+                                </div>
+                              ))}
+                              {sale.items && sale.items.length > 2 && (
+                                <button className="text-xs text-cyan-400 flex items-center gap-1" onClick={() => toggleRow(sale.id!)}>
+                                  {expandedRows[sale.id!] ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />} Show all
+                                </button>
+                              )}
                             </div>
-                          ))}
-                          {sale.items.length > 2 && (
-                            <div className="text-xs text-gray-400">
-                              +{sale.items.length - 2} more items
-                            </div>
-                          )}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <span className="text-sm text-white">{totalQuantity}</span>
-                      </td>
-                      <td className="px-6 py-4">
-                        <span className="text-sm font-medium text-green-400">
-                          ${sale.totalAmount.toFixed(2)}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="text-sm text-white">
-                          {new Date(sale.timestamp).toLocaleDateString()}
-                        </div>
-                        <div className="text-xs text-gray-400">
-                          {new Date(sale.timestamp).toLocaleTimeString()}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 text-right">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          icon={FileText}
-                          onClick={() => generatePDF(sale)}
-                        >
-                          Receipt
-                        </Button>
-                      </td>
-                    </tr>
-                  );
-                })}
+                          </td>
+                          <td className="px-6 py-4">
+                            <span className="text-sm text-white">{totalQuantity}</span>
+                          </td>
+                          <td className="px-6 py-4">
+                            <span className="text-sm font-medium text-green-400">${(sale.totalAmount ?? 0).toFixed(2)}</span>
+                          </td>
+                          <td className="px-6 py-4">
+                            <div className="text-sm text-white">{sale.timestamp ? new Date(sale.timestamp).toLocaleDateString() : ''}</div>
+                            <div className="text-xs text-gray-400">{sale.timestamp ? new Date(sale.timestamp).toLocaleTimeString() : ''}</div>
+                          </td>
+                          <td className="px-6 py-4 text-right">
+                            <Button variant="ghost" size="sm" icon={FileText} onClick={() => generatePDF(sale)}>
+                              Receipt
+                            </Button>
+                          </td>
+                        </tr>
+                        {expandedRows[sale.id!] && sale.items && (
+                          <tr className="bg-gray-900">
+                            <td colSpan={6} className="px-6 py-4">
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                                {sale.items.map((item, idx) => (
+                                  <div key={idx} className="text-sm text-gray-300 bg-gray-800/50 px-3 py-2 rounded-lg">
+                                    <div><span className="font-medium">Name:</span> {item.name ?? ''}</div>
+                                    <div><span className="font-medium">Qty:</span> {item.quantity ?? ''}</div>
+                                    <div><span className="font-medium">Sold Price:</span> ${item.soldPrice ?? ''}</div>
+                                    <div><span className="font-medium">Total:</span> {(item.quantity * (item.soldPrice ?? 0)).toFixed(2)}</div>
+                                  </div>
+                                ))}
+                              </div>
+                            </td>
+                          </tr>
+                        )}
+                      </React.Fragment>
+                    );
+                  })
+                )}
               </tbody>
             </table>
           </div>
@@ -235,199 +223,266 @@ const SalesPage: React.FC = () => {
           )}
         </div>
 
-        {/* Add/Edit Sale Modal */}
-        <SaleModal
-          isOpen={isNewSaleModalOpen}
-          onClose={() => setIsNewSaleModalOpen(false)}
-          onSave={handleAddSale}
-        />
+        {/* New Sale Modal */}
+        {/* New Sale Modal */}
+        {isNewSaleModalOpen && (
+          <NewSaleModal
+            isOpen={isNewSaleModalOpen}
+            onClose={() => setIsNewSaleModalOpen(false)}
+            products={products}
+            onSave={async (saleData) => {
+              const sale = await addSale(saleData);
+              await fetchSales();
+              await fetchProducts();
+              generatePDF(sale);
+              setIsNewSaleModalOpen(false);
+            }}
+          />
+        )}
       </div>
     </div>
   );
 };
 
-const StatCard: React.FC<{
-  title: string;
-  value: string | number;
-  subtitle: string;
-  color: 'cyan' | 'blue' | 'green';
-}> = ({ title, value, subtitle, color }) => {
+const StatCard: React.FC<{ title: string; value: string | number; subtitle: string; color: 'cyan' | 'blue' | 'green' }> = ({ title, value, subtitle, color }) => {
   const colorClasses = {
-    cyan: 'from-cyan-500/20 to-cyan-600/20 text-cyan-400',
-    blue: 'from-blue-500/20 to-blue-600/20 text-blue-400',
-    green: 'from-green-500/20 to-green-600/20 text-green-400',
+    cyan: 'text-cyan-400',
+    blue: 'text-blue-400',
+    green: 'text-green-400',
   };
-
   return (
-    <div className="bg-gray-800 border border-gray-700 rounded-xl p-6">
+    <div className={`bg-gray-800 border rounded-xl p-6 border-gray-700`}>
       <h3 className="text-sm font-medium text-gray-400 mb-2">{title}</h3>
-      <div className={`text-2xl font-bold mb-1 ${colorClasses[color].split(' ')[2]}`}>
-        {value}
-      </div>
+      <div className={`text-2xl font-bold mb-1 ${colorClasses[color]}`}>{value}</div>
       <p className="text-sm text-gray-500">{subtitle}</p>
     </div>
   );
 };
 
-const SaleModal: React.FC<{
-  isOpen: boolean;
-  onClose: () => void;
-  onSave: (data: any) => void;
-}> = ({ isOpen, onClose, onSave }) => {
-  const [saleData, setSaleData] = useState<any>({ items: [] });
-  const [productSearch, setProductSearch] = useState('');
-  const [loading, setLoading] = useState(false);
+// Sale modal with soldPrice field
+export const NewSaleModal: React.FC<{ isOpen: boolean; onClose: () => void; products: Product[]; onSave: (sale: SaleItem) => void; }> = ({ isOpen, onClose, products, onSave }) => {
+  const [saleItems, setSaleItems] = useState<any[]>([]);
+  const [searchTerm, setSearchTerm] = useState('');
 
-  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setProductSearch(e.target.value);
-  };
+  const availableProducts = products.filter(p => p.quantity > 0);
+  const filteredProducts = availableProducts.filter(product =>
+    product.name.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
-  const handleAddProduct = (product: any) => {
-    const exists = saleData.items.find((item: any) => item.productId === product.id);
-    if (exists) {
-      setSaleData((prev: any) => ({
-        ...prev,
-        items: prev.items.map((item: any) =>
-          item.productId === product.id
-            ? { ...item, quantity: item.quantity + 1 }
+  const addItem = (product: Product) => {
+    const existingItem = saleItems.find(item => item.name === product.name);
+    if (existingItem) {
+      setSaleItems(prev =>
+        prev.map(item =>
+          item.name === product.name
+            ? {
+                ...item,
+                quantity: Math.min(item.quantity + 1, product.quantity),
+                totalPrice: (Math.min(item.quantity + 1, product.quantity)) * (item.soldPrice ?? product.unitPrice)
+              }
             : item
-        ),
-      }));
+        )
+      );
     } else {
-      setSaleData((prev: any) => ({
+      setSaleItems(prev => [
         ...prev,
-        items: [...prev.items, { productId: product.id, quantity: 1 }],
-      }));
+        {
+          name: product.name,
+          quantity: 1,
+          unitPrice: product.unitPrice,
+          soldPrice: product.unitPrice,
+          totalPrice: product.unitPrice,
+        },
+      ]);
     }
   };
 
-  const handleRemoveProduct = (productId: string) => {
-    setSaleData((prev: any) => ({
-      ...prev,
-      items: prev.items.filter((item: any) => item.productId !== productId),
-    }));
+  const updateItemQuantity = (name: string, quantity: number) => {
+    const product = products.find(p => p.name === name);
+    if (!product) return;
+    setSaleItems(prev =>
+      prev.map(item =>
+        item.name === name
+          ? {
+              ...item,
+              quantity: Math.min(Math.max(1, quantity), product.quantity),
+              totalPrice: Math.min(Math.max(1, quantity), product.quantity) * (item.soldPrice ?? item.unitPrice)
+            }
+          : item
+      )
+    );
   };
 
-  const handleQuantityChange = (productId: string, quantity: number) => {
-    setSaleData((prev: any) => ({
-      ...prev,
-      items: prev.items.map((item: any) =>
-        item.productId === productId ? { ...item, quantity } : item
-      ),
-    }));
+  const updateSoldPrice = (name: string, soldPrice: number) => {
+    setSaleItems(prev =>
+      prev.map(item =>
+        item.name === name
+          ? {
+              ...item,
+              soldPrice,
+              totalPrice: item.quantity * soldPrice
+            }
+          : item
+      )
+    );
   };
 
-  const totalAmount = saleData.items.reduce(
-    (sum: number, item: any) => sum + item.quantity * item.unitPrice,
-    0
-  );
+  const removeItem = (name: string) => {
+    setSaleItems(prev => prev.filter(item => item.name !== name));
+  };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    onSave(saleData);
+  const totalAmount = saleItems.reduce((sum, item) => sum + item.totalPrice, 0);
+
+  // const handleSave = () => {
+  //   if (saleItems.length === 0) return;
+  //   // Build items array as expected by SaleItem interface
+  //   const items = saleItems.map(item => {
+  //     const product = products.find(p => p.name === item.name);
+  //     return {
+  //       id: product?.id ?? 0,
+  //       name: item.name,
+  //       quantity: item.quantity,
+  //       soldPrice: item.soldPrice
+  //     };
+  //   });
+  //   onSave({
+  //     items,
+  //     totalAmount,
+  //     timestamp: new Date().toISOString(),
+  //   });
+  //   setSaleItems([]);
+  //   setSearchTerm('');
+  // };
+
+  const handleSave = () => {
+    if (saleItems.length === 0) return;
+
+    // Build items array as expected by VenteItem interface
+    const items = saleItems.map(item => {
+      const product = products.find(p => p.name === item.name);
+      return {
+        produit: {            
+          id: product?.id ?? 0,
+          name: item.name,
+        },
+        quantite: item.quantity,
+        prixVendu: item.soldPrice
+      };
+    });
+
+    // Build Vente object
+    const vente = {
+      items,
+      coutTotal: totalAmount,
+      date: new Date().toISOString(),
+    };
+
+    onSave(vente);   // Call API with the corrected structure
+
+    setSaleItems([]);
+    setSearchTerm('');
+  };
+
+
+  const handleClose = () => {
+    setSaleItems([]);
+    setSearchTerm('');
+    onClose();
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} size="lg">
-      <form onSubmit={handleSubmit} className="space-y-6">
-        <div>
-          <h2 className="text-lg font-semibold text-white">New Sale</h2>
-          <p className="text-gray-400 text-sm">
-            Add products to the sale and specify the quantities.
-          </p>
-        </div>
-
+    <Modal isOpen={isOpen} onClose={handleClose} title="New Sale" size="xl">
+      <div className="space-y-6">
         {/* Product Search */}
         <div>
-          <label className="block text-sm font-medium text-gray-300 mb-2">
-            Search Products
-          </label>
+          <label className="block text-sm font-medium text-gray-300 mb-2">Add Products</label>
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
             <input
               type="text"
-              placeholder="Search products..."
-              value={productSearch}
-              onChange={handleSearchChange}
+              placeholder="Search products to add..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full pl-10 pr-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
             />
           </div>
-        </div>
-
-        {/* Selected Products */}
-        <div>
-          <label className="block text-sm font-medium text-gray-300 mb-2">
-            Selected Products
-          </label>
-          <div className="bg-gray-800 border border-gray-700 rounded-lg">
-            {saleData.items.length === 0 ? (
-              <div className="px-4 py-3 text-gray-400 text-center">
-                No products added to the sale
-              </div>
-            ) : (
-              saleData.items.map((item: any) => (
-                <div
-                  key={item.productId}
-                  className="flex items-center justify-between p-4 border-b border-gray-700"
+          {searchTerm && (
+            <div className="mt-2 max-h-48 overflow-y-auto bg-gray-800 border border-gray-700 rounded-lg">
+              {filteredProducts.slice(0, 5).map(product => (
+                <button
+                  key={product.name}
+                  onClick={() => addItem(product)}
+                  className="w-full px-4 py-3 text-left hover:bg-gray-700 transition-colors border-b border-gray-700 last:border-b-0"
                 >
-                  <div className="flex-1">
-                    <div className="text-white font-medium">
-                      {item.productName}
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <div className="text-white font-medium">{product.name}</div>
+                      <div className="text-gray-400 text-sm">${product.unitPrice.toFixed(2)} 2 {product.quantity} available</div>
                     </div>
-                    <div className="text-gray-400 text-sm">
-                      ${item.unitPrice.toFixed(2)} x {item.quantity}
-                    </div>
+                    <Plus className="w-4 h-4 text-cyan-400" />
                   </div>
-                  <div className="flex items-center space-x-2">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleQuantityChange(item.productId, item.quantity - 1)}
-                      disabled={item.quantity <= 1}
-                    >
-                      -
-                    </Button>
-                    <span className="text-white">{item.quantity}</span>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleQuantityChange(item.productId, item.quantity + 1)}
-                    >
-                      +
-                    </Button>
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      onClick={() => handleRemoveProduct(item.productId)}
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
+                </button>
+              ))}
+              {filteredProducts.length === 0 && (
+                <div className="px-4 py-3 text-gray-400 text-center">No products found</div>
+              )}
+            </div>
+          )}
         </div>
 
-        {/* Total Amount */}
-        <div className="flex justify-between items-center text-lg font-semibold">
-          <span className="text-white">Total Amount:</span>
-          <span className="text-cyan-400">${totalAmount.toFixed(2)}</span>
-        </div>
+        {/* Sale Items */}
+        {saleItems.length > 0 && (
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-2">Sale Items</label>
+            <div className="space-y-2">
+              {saleItems.map(item => {
+                const product = products.find(p => p.name === item.name);
+                return (
+                  <div key={item.name} className="flex items-center justify-between p-4 bg-gray-800 border border-gray-700 rounded-lg">
+                    <div className="flex-1">
+                      <div className="text-white font-medium">{item.name}</div>
+                      <div className="text-gray-400 text-sm">Unit Price: ${item.unitPrice.toFixed(2)}</div>
+                      <div className="text-gray-400 text-sm">Sold Price: <input type="number" value={item.soldPrice} min={0} step={0.01} onChange={e => updateSoldPrice(item.name, parseFloat(e.target.value) || item.unitPrice)} className="w-20 px-2 py-1 bg-gray-700 border border-gray-600 rounded text-center text-white" /></div>
+                    </div>
+                    <div className="flex items-center space-x-3">
+                      <div className="flex items-center space-x-2">
+                        <button onClick={() => updateItemQuantity(item.name, item.quantity - 1)} className="w-8 h-8 bg-gray-700 hover:bg-gray-600 rounded text-white flex items-center justify-center">-</button>
+                        <input type="number" value={item.quantity} onChange={(e) => updateItemQuantity(item.name, parseInt(e.target.value) || 1)} min={1} max={product?.quantity || 1} className="w-16 px-2 py-1 bg-gray-700 border border-gray-600 rounded text-center text-white" />
+                        <button onClick={() => updateItemQuantity(item.name, item.quantity + 1)} className="w-8 h-8 bg-gray-700 hover:bg-gray-600 rounded text-white flex items-center justify-center">+</button>
+                      </div>
+                      <div className="text-cyan-400 font-medium w-20 text-right">${item.totalPrice.toFixed(2)}</div>
+                      <button onClick={() => removeItem(item.name)} className="text-red-400 hover:text-red-300 p-1"><Trash2 className="w-4 h-4" /></button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Total */}
+        {saleItems.length > 0 && (
+          <div className="border-t border-gray-700 pt-4">
+            <div className="flex justify-between items-center text-lg font-semibold">
+              <span className="text-white">Total Amount:</span>
+              <span className="text-cyan-400">${totalAmount.toFixed(2)}</span>
+            </div>
+          </div>
+        )}
 
         {/* Actions */}
         <div className="flex justify-end space-x-4">
-          <Button variant="secondary" onClick={onClose}>
+          <Button variant="secondary" onClick={handleClose}>
             Cancel
           </Button>
           <Button
-            type="submit"
-            disabled={saleData.items.length === 0 || loading}
+            onClick={handleSave}
+            disabled={saleItems.length === 0}
           >
-            {loading ? 'Saving...' : 'Save Sale'}
+            Complete Sale
           </Button>
         </div>
-      </form>
+      </div>
     </Modal>
   );
 };

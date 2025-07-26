@@ -43,10 +43,10 @@ public class Produits {
     @Column(name = "designation", nullable = true)
     private String designation;
 
-    @Column(name = "created_at", nullable = false)
+    @Column(name = "created_at")
     private LocalDateTime createdAt;
 
-    @Column(name = "updated_at", nullable = true)
+    @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
     @ManyToOne

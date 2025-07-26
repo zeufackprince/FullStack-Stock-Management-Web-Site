@@ -1,158 +1,100 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { Product, Sale, Restock, SaleItem, RestockItem } from '../types';
+import { Product, SaleItem, RestockItem } from '../utils/ApiFunction';
+import * as api from '../utils/ApiFunction';
 
 interface StockContextType {
   products: Product[];
-  sales: Sale[];
-  restocks: Restock[];
-  addProduct: (product: Omit<Product, 'id' | 'createdAt' | 'updatedAt'>) => void;
-  updateProduct: (id: string, updates: Partial<Product>) => void;
-  deleteProduct: (id: string) => void;
-  addSale: (items: SaleItem[]) => Sale;
-  addRestock: (items: RestockItem[]) => void;
+  sales: SaleItem[];
+  restocks: RestockItem[];
+  fetchProducts: () => Promise<void>;
+  fetchSales: () => Promise<void>;
+  fetchRestocks: () => Promise<void>;
+  addProduct: (product: Product | Product[]) => Promise<void>;
+  updateProduct: (id: number, updates: Partial<Product>) => Promise<void>;
+  deleteProduct: (id: number) => Promise<void>;
+  addSale: (items: SaleItem) => Promise<SaleItem>;
+  addRestock: (items: RestockItem) => Promise<void>;
   getLowStockProducts: () => Product[];
-  getProductById: (id: string) => Product | undefined;
+  getProductById: (id: number) => Product | undefined;
 }
 
 const StockContext = createContext<StockContextType | undefined>(undefined);
 
-const generateId = () => Math.random().toString(36).substr(2, 9);
+// No local mock data
 
-const initialProducts: Product[] = [
-  {
-    id: '1',
-    name: 'Gaming Laptop',
-    designation: 'Electronics',
-    quantity: 15,
-    price: 1299.99,
-    description: 'High-performance gaming laptop with RTX graphics',
-    minQuantity: 5,
-    createdAt: new Date('2024-01-15'),
-    updatedAt: new Date('2024-01-15'),
-  },
-  {
-    id: '2',
-    name: 'Wireless Headphones',
-    designation: 'Audio',
-    quantity: 3,
-    price: 199.99,
-    description: 'Premium noise-canceling wireless headphones',
-    minQuantity: 10,
-    createdAt: new Date('2024-01-16'),
-    updatedAt: new Date('2024-01-16'),
-  },
-  {
-    id: '3',
-    name: 'Smart Watch',
-    designation: 'Wearables',
-    quantity: 25,
-    price: 299.99,
-    description: 'Advanced fitness tracking smartwatch',
-    minQuantity: 8,
-    createdAt: new Date('2024-01-17'),
-    updatedAt: new Date('2024-01-17'),
-  },
-  {
-    id: '4',
-    name: 'Mechanical Keyboard',
-    designation: 'Peripherals',
-    quantity: 2,
-    price: 149.99,
-    description: 'RGB mechanical keyboard with custom switches',
-    minQuantity: 6,
-    createdAt: new Date('2024-01-18'),
-    updatedAt: new Date('2024-01-18'),
-  },
-];
 
 export const StockProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [products, setProducts] = useState<Product[]>(initialProducts);
-  const [sales, setSales] = useState<Sale[]>([]);
-  const [restocks, setRestocks] = useState<Restock[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [sales, setSales] = useState<SaleItem[]>([]);
+  const [restocks, setRestocks] = useState<RestockItem[]>([]);
 
-  const addProduct = (productData: Omit<Product, 'id' | 'createdAt' | 'updatedAt'>) => {
-    const newProduct: Product = {
-      ...productData,
-      id: generateId(),
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
-    setProducts(prev => [...prev, newProduct]);
+  // Fetch all products
+  const fetchProducts = async () => {
+    const data = await api.getAllProducts();
+    setProducts(data);
   };
 
-  const updateProduct = (id: string, updates: Partial<Product>) => {
-    setProducts(prev =>
-      prev.map(product =>
-        product.id === id
-          ? { ...product, ...updates, updatedAt: new Date() }
-          : product
-      )
-    );
+  // Fetch all sales
+  const fetchSales = async () => {
+    const data = await api.getAllSales();
+    setSales(data);
   };
 
-  const deleteProduct = (id: string) => {
-    setProducts(prev => prev.filter(product => product.id !== id));
+  // Fetch all restocks
+  const fetchRestocks = async () => {
+    const data = await api.getAllRestocks();
+    setRestocks(data);
   };
 
-  const addSale = (items: SaleItem[]): Sale => {
-    const newSale: Sale = {
-      id: generateId(),
-      items,
-      totalAmount: items.reduce((sum, item) => sum + item.totalPrice, 0),
-      timestamp: new Date(),
-    };
-
-    // Update product quantities
-    items.forEach(item => {
-      setProducts(prev =>
-        prev.map(product =>
-          product.id === item.productId
-            ? { 
-                ...product, 
-                quantity: Math.max(0, product.quantity - item.quantity),
-                updatedAt: new Date()
-              }
-            : product
-        )
-      );
-    });
-
-    setSales(prev => [newSale, ...prev]);
-    return newSale;
+  // Add product(s)
+  const addProduct = async (product: Product | Product[]) => {
+    await api.createProduct(product);
+    await fetchProducts();
   };
 
-  const addRestock = (items: RestockItem[]) => {
-    const newRestock: Restock = {
-      id: generateId(),
-      items,
-      timestamp: new Date(),
-    };
-
-    // Update product quantities
-    items.forEach(item => {
-      setProducts(prev =>
-        prev.map(product =>
-          product.id === item.productId
-            ? { 
-                ...product, 
-                quantity: product.quantity + item.quantity,
-                updatedAt: new Date()
-              }
-            : product
-        )
-      );
-    });
-
-    setRestocks(prev => [newRestock, ...prev]);
+  // Update product
+  const updateProduct = async (id: number, updates: Partial<Product>) => {
+    await api.updateProduct(id, updates as Product);
+    await fetchProducts();
   };
 
+  // Delete product
+  const deleteProduct = async (id: number) => {
+    await api.deleteProduct(id);
+    await fetchProducts();
+  };
+
+  // Add sale
+  const addSale = async (sale: SaleItem) => {
+    const result = await api.createSale(sale);
+    await fetchSales();
+    await fetchProducts();
+    return result;
+  };
+
+  // Add restock
+  const addRestock = async (restock: RestockItem) => {
+    await api.createRestock(restock);
+    await fetchRestocks();
+    await fetchProducts();
+  };
+
+  // Get low stock products
   const getLowStockProducts = () => {
-    return products.filter(product => product.quantity <= product.minQuantity);
+    return products.filter(product => product.minQuantity !== undefined && product.quantity <= product.minQuantity);
   };
 
-  const getProductById = (id: string) => {
+  // Get product by id
+  const getProductById = (id: number) => {
     return products.find(product => product.id === id);
   };
+
+  // Initial load
+  useEffect(() => {
+    fetchProducts();
+    fetchSales();
+    fetchRestocks();
+  }, []);
 
   return (
     <StockContext.Provider
@@ -160,6 +102,9 @@ export const StockProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         products,
         sales,
         restocks,
+        fetchProducts,
+        fetchSales,
+        fetchRestocks,
         addProduct,
         updateProduct,
         deleteProduct,

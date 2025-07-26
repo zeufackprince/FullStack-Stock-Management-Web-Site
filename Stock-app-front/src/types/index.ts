@@ -1,9 +1,5 @@
 export interface Product {
-  qte: number;
-  nom: any;
-  code(code: any): unknown;
-  uprix: ReactNode;
-  id: string;
+  id: number;
   name: string;
   designation: string;
   quantity: number;
@@ -15,29 +11,29 @@ export interface Product {
 }
 
 export interface SaleItem {
-  productId: string;
-  productName: string;
+  productId: number;
+  name: string;
   quantity: number;
   unitPrice: number;
   totalPrice: number;
 }
 
 export interface Sale {
-  id: string;
+  id: number;
   items: SaleItem[];
   totalAmount: number;
   timestamp: Date;
 }
 
 export interface RestockItem {
-  productId: string;
-  productName: string;
+  productId: number;
+  name: string;
   quantity: number;
   unitPrice: number;
 }
 
 export interface Restock {
-  id: string;
+  id: number;
   items: RestockItem[];
   timestamp: Date;
 }

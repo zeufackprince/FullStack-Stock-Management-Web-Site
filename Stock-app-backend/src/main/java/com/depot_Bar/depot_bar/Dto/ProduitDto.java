@@ -23,9 +23,10 @@ public class ProduitDto {
 
     private Long venteId;
 
+
     private String description;
 
     private String designation;
     
-    private String minQuantity;
+    private int minQuantity;
 }

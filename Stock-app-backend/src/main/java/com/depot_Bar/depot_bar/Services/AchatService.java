@@ -33,7 +33,7 @@ public class AchatService {
         
         for (AchatItem item : achats.getItems()) {
 
-            produitService.ajouterQuantite(item.getProduit().getId(), item.getQuantite());
+            produitService.ajouterQuantite(item.getProduit().getName(), item.getQuantite());
             item.setAchat(achats);
         }
         Achats dbAchats =  this.achatRepository.save(achats);

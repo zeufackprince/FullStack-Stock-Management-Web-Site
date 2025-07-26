@@ -20,7 +20,6 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 
-
 @RestController
 @RequestMapping("/api")
 @AllArgsConstructor
@@ -31,57 +30,55 @@ public class ProduitController {
     private final ProduitRepository produitRepository;
 
     @PostMapping("/produit/create")
-    public ProduitDto newproduit(@RequestBody ProduitDto produits){
+    public ProduitDto newproduit(@RequestBody ProduitDto produits) {
 
         ProduitDto res = new ProduitDto();
-        if(produits.getName() == null || produits.getQuantity() <= 0 || produits.getUnitPrice() <= 0){
+        if (produits.getName() == null || produits.getQuantity() <= 0 || produits.getUnitPrice() <= 0) {
 
-            res.setMessage("Error invalide entry" );
+            res.setMessage("Error invalide entry");
             res.setCode(400);
 
-        }else{
-            res =  this.produitService.newproduit(produits);
+        } else {
+            res = this.produitService.newproduit(produits);
         }
-        
 
         return res;
     }
 
     @PostMapping("/produits/batch")
-        public ResponseEntity<?> saveManyProduits(@RequestBody List<Produits> produits) {
+    public ResponseEntity<?> saveManyProduits(@RequestBody List<Produits> produits) {
         List<Produits> savedProduits = produitRepository.saveAll(produits);
         return ResponseEntity.ok(savedProduits);
     }
 
     @PutMapping("/produit/update/{id}")
-    public ProduitDto updateProd(@PathVariable Long id,@RequestBody ProduitDto prod){
+    public ProduitDto updateProd(@PathVariable Long id, @RequestBody ProduitDto prod) {
 
         return this.produitService.updateProd(id, prod);
     }
 
     @DeleteMapping("/produit/delete/{Id}")
-    public ProduitDto deleteProd(@PathVariable Long Id){
+    public ProduitDto deleteProd(@PathVariable Long Id) {
 
         return this.produitService.deleteProd(Id);
     }
 
     @GetMapping("/produit/{id}")
-    public ProduitDto getProdById(@PathVariable Long id){
+    public ProduitDto getProdById(@PathVariable Long id) {
 
         return this.produitService.getProduitById(id);
     }
 
     @GetMapping("/produit/getAllProd")
-    public List<ProduitDto> getAllProduit(){
-        
+    public List<ProduitDto> getAllProduit() {
+
         return this.produitService.getAllProduit();
     }
 
     @GetMapping("/produit/getProdByNom/{nom}")
-    public ProduitDto getProdByNom(@PathVariable String nom){
+    public ProduitDto getProdByNom(@PathVariable String nom) {
 
         return this.produitService.getprodByNom(nom);
     }
 
-    
 }

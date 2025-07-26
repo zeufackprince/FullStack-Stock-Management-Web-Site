@@ -1,115 +1,40 @@
 import React, { useState, useMemo } from 'react';
-import {
-  createProduct,
-  updateProduct,
-  deleteProduct,
-  getAllProducts
-} from '../utils/ApiFunction';
-import { Plus, Search, Filter, AlertTriangle, Edit, Trash2, Package } from 'lucide-react';
+import { useStock } from '../context/StockContext';
+import { Plus, Search, AlertTriangle, Edit, Trash2, Package } from 'lucide-react';
 import Button from '../components/Button';
 import Input from '../components/Input';
 import Modal from '../components/Modal';
-import { Product } from '../types';
+import { Product } from '../utils/ApiFunction';
 
 const ProductsPage: React.FC = () => {
-  const [products, setProducts] = useState<Product[]>([]);
+  const { products, addProduct, updateProduct, deleteProduct, getLowStockProducts, fetchProducts } = useStock();
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterCategory, setFilterCategory] = useState('all');
   const [showLowStock, setShowLowStock] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  // Fetch products from backend
-  React.useEffect(() => {
-    setLoading(true);
-    getAllProducts()
-      .then((data) => setProducts(data as Product[]))
-      .catch(err => setError(err.message))
-      .finally(() => setLoading(false));
-  }, []);
-
-  // Add product
-  const handleAddProduct = async (data: any) => {
-    setLoading(true);
-    try {
-      // Only send the required fields
-      await createProduct({
-        nom: data.nom,
-        code: data.code,
-        uprix: data.uprix,
-        qte: data.qte
-      });
-      const updated = await getAllProducts();
-      setProducts(updated);
-      setIsAddModalOpen(false);
-    } catch (err: any) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Edit product
-  const handleEditProduct = async (id: number, data: any) => {
-    setLoading(true);
-    try {
-      await updateProduct(id, {
-        nom: data.nom,
-        code: data.code,
-        uprix: data.uprix,
-        qte: data.qte
-      });
-      const updated = await getAllProducts();
-      setProducts(updated);
-      setEditingProduct(null);
-    } catch (err: any) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Delete product
-  const handleDeleteProduct = async (id: number) => {
-    setLoading(true);
-    try {
-      await deleteProduct(id);
-      setProducts(products.filter(p => p.id !== id));
-    } catch (err: any) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Get low stock products (example: qte < 10)
-  const getLowStockProducts = () => products.filter(p => p.qte <= 10);
 
   const filteredProducts = useMemo(() => {
     let filtered = products;
-
     if (searchTerm) {
       filtered = filtered.filter(product =>
-        product.nom.toLowerCase().includes(searchTerm.toLowerCase())
+        product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        product.designation.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        product.description.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
-
     if (filterCategory !== 'all') {
-      filtered = filtered.filter(product => String(product.code) === filterCategory);
+      filtered = filtered.filter(product => product.designation === filterCategory);
     }
-
     if (showLowStock) {
       const lowStockIds = getLowStockProducts().map(p => p.id);
       filtered = filtered.filter(product => lowStockIds.includes(product.id));
     }
-
     return filtered;
   }, [products, searchTerm, filterCategory, showLowStock, getLowStockProducts]);
 
   const categories = useMemo(() => {
-    const cats = [...new Set(products.map(p => String(p.code)))];
+    const cats = [...new Set(products.map(p => p.designation))];
     return cats.sort();
   }, [products]);
 
@@ -146,7 +71,7 @@ const ProductsPage: React.FC = () => {
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
                 <input
                   type="text"
-                  placeholder="Search products by name..."
+                  placeholder="Search products..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="w-full pl-10 pr-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
@@ -159,7 +84,7 @@ const ProductsPage: React.FC = () => {
                 onChange={(e) => setFilterCategory(e.target.value)}
                 className="px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-cyan-500"
               >
-                <option value="all">All Codes</option>
+                <option value="all">All Categories</option>
                 {categories.map(category => (
                   <option key={category} value={category}>{category}</option>
                 ))}
@@ -183,16 +108,16 @@ const ProductsPage: React.FC = () => {
               <thead className="bg-gray-900">
                 <tr>
                   <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
-                    Name
+                    Product
                   </th>
                   <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
-                    Code
+                    Category
                   </th>
                   <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
                     Quantity
                   </th>
                   <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
-                    Unit Price
+                    Price
                   </th>
                   <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
                     Status
@@ -204,7 +129,7 @@ const ProductsPage: React.FC = () => {
               </thead>
               <tbody className="divide-y divide-gray-700">
                 {filteredProducts.map((product) => {
-                  const isLowStock = product.qte <= 10;
+                  const isLowStock = product.minQuantity !== undefined ? product.quantity <= product.minQuantity : false;
                   return (
                     <tr key={product.id} className="hover:bg-gray-700/50 transition-colors">
                       <td className="px-6 py-4">
@@ -215,27 +140,28 @@ const ProductsPage: React.FC = () => {
                             </div>
                           </div>
                           <div className="ml-4">
-                            <div className="text-sm font-medium text-white">{product.nom}</div>
-                            <div className="text-sm text-gray-400 line-clamp-1">Code: {product.code}</div>
+                            <div className="text-sm font-medium text-white">{product.name}</div>
+                            <div className="text-sm text-gray-400 line-clamp-1">{product.description}</div>
                           </div>
                         </div>
                       </td>
                       <td className="px-6 py-4">
                         <span className="px-2 py-1 text-xs font-medium bg-gray-700 text-gray-300 rounded-full">
-                          {product.code}
+                          {product.designation}
                         </span>
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex items-center">
                           <span className={`text-sm font-medium ${isLowStock ? 'text-red-400' : 'text-white'}`}>
-                            {product.qte}
+                            {product.quantity}
                           </span>
                           {isLowStock && <AlertTriangle className="w-4 h-4 text-red-400 ml-2" />}
                         </div>
+                        <div className="text-xs text-gray-400">Min: {product.minQuantity}</div>
                       </td>
                       <td className="px-6 py-4">
                         <span className="text-sm font-medium text-cyan-400">
-                          ${product.uprix}
+                          ${(product.unitPrice ?? 0).toFixed(2)}
                         </span>
                       </td>
                       <td className="px-6 py-4">
@@ -260,7 +186,7 @@ const ProductsPage: React.FC = () => {
                           variant="ghost"
                           size="sm"
                           icon={Trash2}
-                          onClick={() => handleDeleteProduct(product.id)}
+                          onClick={() => deleteProduct(product.id)}
                         >
                           Delete
                         </Button>
@@ -293,12 +219,19 @@ const ProductsPage: React.FC = () => {
             setEditingProduct(null);
           }}
           product={editingProduct}
-          onSave={(productData) => {
+          onSave={async (productDataOrList) => {
             if (editingProduct) {
-              handleEditProduct(editingProduct.id, productData);
+              // Only allow single product update
+              if (!Array.isArray(productDataOrList)) {
+                await updateProduct(editingProduct.id, productDataOrList);
+              }
             } else {
-              handleAddProduct(productData);
+              // Multi-product creation
+              await addProduct(productDataOrList);
             }
+            await fetchProducts();
+            setIsAddModalOpen(false);
+            setEditingProduct(null);
           }}
         />
       </div>
@@ -306,94 +239,144 @@ const ProductsPage: React.FC = () => {
   );
 };
 
+// Multi-product creation support
 const ProductModal: React.FC<{
   isOpen: boolean;
   onClose: () => void;
   product: Product | null;
-  onSave: (product: Omit<Product, 'id' | 'message' | 'venteId'>) => void;
+  onSave: (product: Product | Product[]) => void;
 }> = ({ isOpen, onClose, product, onSave }) => {
-  const [formData, setFormData] = useState({
-    nom: '',
-    code: 0,
-    uprix: 0,
-    qte: 0
-  });
+  const [formList, setFormList] = useState<Product[]>([{
+    id: 0,
+    name: '',
+    designation: '',
+    quantity: 0,
+    unitPrice: 0,
+    description: '',
+    minQuantity: 5,
+  }]);
 
   React.useEffect(() => {
     if (product) {
-      setFormData({
-        nom: product.nom,
-        code: product.code,
-        uprix: product.uprix,
-        qte: product.qte
-      });
+      setFormList([{ ...product }]);
     } else {
-      setFormData({
-        nom: '',
-        code: 0,
-        uprix: 0,
-        qte: 0
-      });
+      setFormList([{
+        id: 0,
+        name: '',
+        designation: '',
+        quantity: 0,
+        unitPrice: 0,
+        description: '',
+        minQuantity: 5,
+      }]);
     }
   }, [product]);
 
+  const handleChange = (idx: number, field: keyof Product, value: any) => {
+    setFormList(prev => prev.map((item, i) => i === idx ? { ...item, [field]: value } : item));
+  };
+
+  const handleAddRow = () => {
+    setFormList(prev => [...prev, {
+      id: 0,
+      name: '',
+      designation: '',
+      quantity: 0,
+      unitPrice: 0,
+      description: '',
+      minQuantity: 5,
+    }]);
+  };
+
+  const handleRemoveRow = (idx: number) => {
+    setFormList(prev => prev.filter((_, i) => i !== idx));
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSave(formData);
+    if (formList.length === 1) {
+      onSave(formList[0]);
+    } else {
+      onSave(formList);
+    }
   };
 
   return (
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title={product ? 'Edit Product' : 'Add New Product'}
+      title={product ? 'Edit Product' : 'Add New Product(s)'}
       size="lg"
     >
       <form onSubmit={handleSubmit} className="space-y-6">
-        <div className="grid md:grid-cols-2 gap-6">
-          <Input
-            label="Product Name"
-            value={formData.nom}
-            onChange={(e) => setFormData(prev => ({ ...prev, nom: e.target.value }))}
-            placeholder="Enter product name"
-            required
-          />
-          <Input
-            label="Code"
-            type="number"
-            value={formData.code}
-            onChange={(e) => setFormData(prev => ({ ...prev, code: parseInt(e.target.value) || 0 }))}
-            required
-          />
-        </div>
-
-        <div className="grid md:grid-cols-2 gap-6">
-          <Input
-            label="Unit Price"
-            type="number"
-            value={formData.uprix}
-            onChange={(e) => setFormData(prev => ({ ...prev, uprix: parseFloat(e.target.value) || 0 }))}
-            min={0}
-            step={0.01}
-            required
-          />
-          <Input
-            label="Quantity"
-            type="number"
-            value={formData.qte}
-            onChange={(e) => setFormData(prev => ({ ...prev, qte: parseInt(e.target.value) || 0 }))}
-            min={0}
-            required
-          />
-        </div>
-
-        <div className="flex justify-end space-x-4">
-          <Button variant="secondary" onClick={onClose}>
-            Cancel
+        {formList.map((formData, idx) => (
+          <div key={idx} className="grid md:grid-cols-5 gap-4 items-end mb-2">
+            <Input
+              label="Product Name"
+              value={formData.name}
+              onChange={(e) => handleChange(idx, 'name', e.target.value)}
+              placeholder="Enter product name"
+              required
+            />
+            <Input
+              label="Category"
+              value={formData.designation}
+              onChange={(e) => handleChange(idx, 'designation', e.target.value)}
+              placeholder="e.g., Electronics, Clothing"
+              required
+            />
+            <Input
+              label="Quantity"
+              type="number"
+              value={formData.quantity}
+              onChange={(e) => handleChange(idx, 'quantity', parseInt(e.target.value) || 0)}
+              min={0}
+              required
+            />
+            <Input
+              label="Unit Price ($)"
+              type="number"
+              value={formData.unitPrice}
+              onChange={(e) => handleChange(idx, 'unitPrice', parseFloat(e.target.value) || 0)}
+              min={0}
+              step={0.01}
+              required
+            />
+            <Input
+              label="Min Quantity"
+              type="number"
+              value={formData.minQuantity ?? 0}
+              onChange={(e) => handleChange(idx, 'minQuantity', parseInt(e.target.value) || 0)}
+              min={0}
+              required
+            />
+            <Input
+              label="Description"
+              value={formData.description}
+              onChange={(e) => handleChange(idx, 'description', e.target.value)}
+              placeholder="Enter product description"
+              multiline
+              rows={2}
+            />
+            {formList.length > 1 && (
+              <Button variant="danger" onClick={() => handleRemoveRow(idx)}>
+                Remove
+              </Button>
+            )}
+          </div>
+        ))}
+        <div className="flex justify-between items-center">
+          <Button variant="secondary" onClick={handleAddRow}>
+            Add Another Product
           </Button>
-          <Button type="submit">
-            {product ? 'Update Product' : 'Add Product'}
-          </Button>
+          <div className="flex space-x-4">
+            <Button variant="secondary" onClick={onClose}>
+              Cancel
+            </Button>
+            <Button type="submit">
+              {product ? 'Update Product' : 'Add Product(s)'}
+            </Button>
+          </div>
         </div>
       </form>
     </Modal>
