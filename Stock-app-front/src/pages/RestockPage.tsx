@@ -22,7 +22,7 @@ const RestockPage: React.FC = () => {
 
   const lowStockProducts = getLowStockProducts();
   const totalRestockedItems = restocks.reduce((sum, restock) => 
-    sum + restock.items.reduce((itemSum, item) => itemSum + item.quantity, 0), 0
+    sum + (Array.isArray(restock.items) ? restock.items.reduce((itemSum, item) => itemSum + item.quantity, 0) : 0), 0
   );
 
   return (
@@ -276,11 +276,52 @@ export const NewRestockModal: React.FC<{ isOpen: boolean; onClose: () => void; p
     setRestockItems(prev => prev.filter(item => item.name !== name));
   };
 
+  // const handleSave = () => {
+  //   if (saleItems.length === 0) return;
+
+  //   // Build items array as expected by VenteItem interface
+  //   const items = saleItems.map(item => {
+  //     const product = products.find(p => p.name === item.name);
+  //     return {
+  //       produit: {
+  //         id: product?.id ?? 0,
+  //         name: item.name,
+  //       },
+  //       quantite: item.quantity,
+  //       prixVendu: item.soldPrice
+  //     };
+  //   });
+
+  //   // Build Vente object
+  //   const vente = {
+  //     items,
+  //     coutTotal: totalAmount,
+  //     date: new Date().toISOString(),
+  //   };
+
+  //   onSave(vente);   // Call API with the corrected structure
+
+  //   setSaleItems([]);
+  //   setSearchTerm('');
+  // };
+
   const handleSave = () => {
     if (restockItems.length === 0) return;
+
+    const items = restockItems.map(item => {
+        const product = products.find(p => p.name === item.name);
+        return {
+          produit: {
+            id: product?.id ?? 0,
+            name: item.name,
+          },
+          quantite: item.quantity,
+          prixVendu: item.soldPrice
+        };
+      });
+    // Build RestockItem object
     onSave({
-      id: Date.now(),
-      items: restockItems,
+      items: items,
       date: new Date().toISOString(),
     });
     setRestockItems([]);

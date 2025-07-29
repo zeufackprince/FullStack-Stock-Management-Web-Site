@@ -370,27 +370,6 @@ export const NewSaleModal: React.FC<{ isOpen: boolean; onClose: () => void; prod
 
   const totalAmount = saleItems.reduce((sum, item) => sum + item.totalPrice, 0);
 
-  // const handleSave = () => {
-  //   if (saleItems.length === 0) return;
-  //   // Build items array as expected by SaleItem interface
-  //   const items = saleItems.map(item => {
-  //     const product = products.find(p => p.name === item.name);
-  //     return {
-  //       id: product?.id ?? 0,
-  //       name: item.name,
-  //       quantity: item.quantity,
-  //       soldPrice: item.soldPrice
-  //     };
-  //   });
-  //   onSave({
-  //     items,
-  //     totalAmount,
-  //     timestamp: new Date().toISOString(),
-  //   });
-  //   setSaleItems([]);
-  //   setSearchTerm('');
-  // };
-
   const handleSave = () => {
     if (saleItems.length === 0) return;
 
