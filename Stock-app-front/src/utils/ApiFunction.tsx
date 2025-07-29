@@ -34,8 +34,8 @@ export interface RestockItem {
 
 // Sale type
 export interface SaleItem {
-  id?: string;
-  items: Array<{ id: number; name: string; quantity: number; soldPrice?: number }>;
+  id: string;
+  items: Array<{ id: number; name: string; quantity: number; unitPrice: number; soldPrice?: number }>;
   totalAmount: number;
   timestamp?: string;
   nomProdEtPrixT?: string;
@@ -56,7 +56,7 @@ async function request<T>(endpoint: string, method: string = 'GET', body: any = 
 }
 
 // Product APIs
-export const createProduct = (data: Product | Product[]) => request<Product | Product[]>('/product/create', 'POST', data);
+export const createProduct = (data: Product | Product[]) => request<Product | Product[]>('/produit/create', 'POST', data);
 export const updateProduct = (id: number, data: Product) => request<Product>(`/produit/update/${id}`, 'PUT', data);
 export const deleteProduct = (id: number) => request<void>(`/produit/delete/${id}`, 'DELETE');
 export const getProductById = (id: number) => request<Product>(`/produit/${id}`);

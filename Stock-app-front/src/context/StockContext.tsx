@@ -36,9 +36,30 @@ export const StockProvider: React.FC<{ children: ReactNode }> = ({ children }) =
 
   // Fetch all sales
   const fetchSales = async () => {
-    const data = await api.getAllSales();
-    setSales(data);
+    const rawData = await api.getAllSales();
+
+    const transformedSales = rawData.map((sale: any) => {
+      return {
+        id: String(sale.id),
+        timestamp: new Date(sale.date).toISOString(),
+        totalAmount: sale.prixVendu,
+        items: sale.nomProdEtPrixT.map((line: string) => {
+          const regex = /CodeProduit:\s*(\d+),\s*Nom produit:\s*([^,]+),\s*Qte produit:\s*(\d+),\s*Prix unitaire:\s*([\d.]+),\s*Prix vendu:\s*([\d.]+),\s*Total:\s*([\d.]+)/;
+          const match = line.match(regex);
+          return {
+            id: match?.[1] || '',
+            name: match?.[2] || '',
+            quantity: Number(match?.[3]) || 0,
+            unitPrice: Number(match?.[4]) || 0,
+            soldPrice: Number(match?.[5]) || 0
+          };
+        })
+      };
+    });
+
+    setSales(transformedSales);
   };
+
 
   // Fetch all restocks
   const fetchRestocks = async () => {

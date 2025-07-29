@@ -34,7 +34,8 @@ const SalesPage: React.FC = () => {
   }, [sales, searchTerm, dateFilter]);
 
   // Track expanded rows for sales table
-  const [expandedRows, setExpandedRows] = useState<{ [key: string]: boolean }>({});
+  const [expandedRows, setExpandedRows] = useState<{ [key: string]: boolean }>({}); 
+
   const toggleRow = (id: string) => {
     setExpandedRows(prev => ({ ...prev, [id]: !prev[id] }));
   };
@@ -186,7 +187,7 @@ const SalesPage: React.FC = () => {
                             </Button>
                           </td>
                         </tr>
-                        {expandedRows[sale.id!] && sale.items && (
+                        {/* {expandedRows[sale.id!] && sale.items && (
                           <tr className="bg-gray-900">
                             <td colSpan={6} className="px-6 py-4">
                               <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
@@ -201,7 +202,43 @@ const SalesPage: React.FC = () => {
                               </div>
                             </td>
                           </tr>
+                        )} */}
+                        {expandedRows[sale.id!] && sale.items && (
+                          <tr className="bg-gray-900">
+                            <td colSpan={6} className="px-6 py-4">
+                              <div className="overflow-x-auto">
+                                <table className="min-w-full text-sm text-left text-gray-300">
+                                  <thead className="bg-gray-800 text-cyan-400">
+                                    <tr>
+                                      <th className="px-4 py-2">Code</th>
+                                      <th className="px-4 py-2">Name</th>
+                                      <th className="px-4 py-2">Qty</th>
+                                      <th className="px-4 py-2">Unit Price</th>
+                                      <th className="px-4 py-2">Sold Price</th>
+                                      <th className="px-4 py-2">Total</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody>
+                                    {sale.items.map((item, idx) => {
+                                      const total = (item.quantity * (item.soldPrice ?? 0)).toFixed(2);
+                                      return (
+                                        <tr key={idx} className="border-t border-gray-700">
+                                          <td className="px-4 py-2">{item.id ?? '-'}</td>
+                                          <td className="px-4 py-2">{item.name ?? '-'}</td>
+                                          <td className="px-4 py-2">{item.quantity ?? '-'}</td>
+                                          <td className="px-4 py-2">${item.unitPrice?.toFixed(2) ?? '-'}</td>
+                                          <td className="px-4 py-2">${item.soldPrice?.toFixed(2) ?? '-'}</td>
+                                          <td className="px-4 py-2">${total}</td>
+                                        </tr>
+                                      );
+                                    })}
+                                  </tbody>
+                                </table>
+                              </div>
+                            </td>
+                          </tr>
                         )}
+
                       </React.Fragment>
                     );
                   })
