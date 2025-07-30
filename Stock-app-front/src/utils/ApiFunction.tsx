@@ -23,6 +23,7 @@ export interface ProduitRef {
     id: number;         // ID du produit
     name?: string;      // Nom du produit (optionnel, juste pour affichage)
     quantity?: number;  // Quantité du produit (optionnel, juste pour affichage)
+    
 }
 
 // Restock type
@@ -31,6 +32,7 @@ export interface RestockItem {
   produit: ProduitRef;
   items: Array<{ name: string; quantity: number }>;
   date?: string;
+  
 }
 
 // Sale type

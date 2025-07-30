@@ -61,13 +61,16 @@ export const StockProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   };
 
 
+  
+
+
   // Fetch all restocks
   const fetchRestocks = async () => {
     const rawData = await api.getAllRestocks();
 
     const transformedRestocks = rawData.map((restock: any) => {
       return {
-        id: String(restock.id),
+        id: restock.id,
         date: new Date(restock.date).toISOString(),
         items: restock.nomProdEtPrixT.map((line: string) => {
           const regex = /CodeProduit:\s*(\d+),\s*Nom produit:\s*([^,]+),\s*Qte produit:\s*(\d+),\s*Prix unitaire:\s*([\d.]+),\s*Total:\s*([\d.]+)/;
@@ -77,6 +80,15 @@ export const StockProvider: React.FC<{ children: ReactNode }> = ({ children }) =
             name: match?.[2] || '',
             quantity: Number(match?.[3]) || 0,
             unitPrice: Number(match?.[4]) || 0
+          };
+        }),
+        produit: restock.nomProdEtPrixT.map((line: string) => {
+          const regex = /CodeProduit:\s*(\d+),\s*Nom produit:\s*([^,]+),\s*Qte produit:\s*(\d+),\s*Prix unitaire:\s*([\d.]+),\s*Total:\s*([\d.]+)/;
+          const match = line.match(regex);
+          return {
+            id: Number(match?.[1]) || 0,
+            name: match?.[2] || '',
+            quantity: Number(match?.[3]) || 0,
           };
         })
       };

@@ -276,35 +276,6 @@ export const NewRestockModal: React.FC<{ isOpen: boolean; onClose: () => void; p
     setRestockItems(prev => prev.filter(item => item.name !== name));
   };
 
-  // const handleSave = () => {
-  //   if (saleItems.length === 0) return;
-
-  //   // Build items array as expected by VenteItem interface
-  //   const items = saleItems.map(item => {
-  //     const product = products.find(p => p.name === item.name);
-  //     return {
-  //       produit: {
-  //         id: product?.id ?? 0,
-  //         name: item.name,
-  //       },
-  //       quantite: item.quantity,
-  //       prixVendu: item.soldPrice
-  //     };
-  //   });
-
-  //   // Build Vente object
-  //   const vente = {
-  //     items,
-  //     coutTotal: totalAmount,
-  //     date: new Date().toISOString(),
-  //   };
-
-  //   onSave(vente);   // Call API with the corrected structure
-
-  //   setSaleItems([]);
-  //   setSearchTerm('');
-  // };
-
   const handleSave = () => {
     if (restockItems.length === 0) return;
 
@@ -312,7 +283,7 @@ export const NewRestockModal: React.FC<{ isOpen: boolean; onClose: () => void; p
         const product = products.find(p => p.name === item.name);
         return {
           produit: {
-            id: product?.id ?? 0,
+            id: String(product?.id) ?? ' ',
             name: item.name,
           },
           quantite: item.quantity,
