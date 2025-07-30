@@ -165,8 +165,8 @@ const SalesPage: React.FC = () => {
                                 </div>
                               ))}
                               {sale.items && sale.items.length > 2 && (
-                                <button className="text-xs text-cyan-400 flex items-center gap-1" onClick={() => toggleRow(sale.id!)}>
-                                  {expandedRows[sale.id!] ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />} Show all
+                                <button className="text-xs text-cyan-400 flex items-center gap-1" onClick={() => toggleRow(String(sale.id))}>
+                                  {expandedRows[String(sale.id)] ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />} Show all
                                 </button>
                               )}
                             </div>
@@ -187,22 +187,6 @@ const SalesPage: React.FC = () => {
                             </Button>
                           </td>
                         </tr>
-                        {/* {expandedRows[sale.id!] && sale.items && (
-                          <tr className="bg-gray-900">
-                            <td colSpan={6} className="px-6 py-4">
-                              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                                {sale.items.map((item, idx) => (
-                                  <div key={idx} className="text-sm text-gray-300 bg-gray-800/50 px-3 py-2 rounded-lg">
-                                    <div><span className="font-medium">Name:</span> {item.name ?? ''}</div>
-                                    <div><span className="font-medium">Qty:</span> {item.quantity ?? ''}</div>
-                                    <div><span className="font-medium">Sold Price:</span> ${item.soldPrice ?? ''}</div>
-                                    <div><span className="font-medium">Total:</span> {(item.quantity * (item.soldPrice ?? 0)).toFixed(2)}</div>
-                                  </div>
-                                ))}
-                              </div>
-                            </td>
-                          </tr>
-                        )} */}
                         {expandedRows[sale.id!] && sale.items && (
                           <tr className="bg-gray-900">
                             <td colSpan={6} className="px-6 py-4">
