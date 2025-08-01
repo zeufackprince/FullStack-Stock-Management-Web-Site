@@ -63,7 +63,7 @@ const HomePage: React.FC = () => {
                           <p className="text-gray-300 mb-4">{product.description}</p>
                           <div className="flex items-center gap-4">
                             <span className="text-3xl font-bold text-cyan-400">
-                              ${product.unitPrice.toFixed(2)}
+                               FCFA {product.unitPrice.toFixed(2)}
                             </span>
                             <span className="text-gray-500">
                               {product.quantity} in stock

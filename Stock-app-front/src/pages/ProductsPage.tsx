@@ -161,7 +161,7 @@ const ProductsPage: React.FC = () => {
                       </td>
                       <td className="px-6 py-4">
                         <span className="text-sm font-medium text-cyan-400">
-                          ${(product.unitPrice ?? 0).toFixed(2)}
+                          {`FCFA ${(product.unitPrice ?? 0).toFixed(2)}`}
                         </span>
                       </td>
                       <td className="px-6 py-4">
@@ -334,7 +334,7 @@ const ProductModal: React.FC<{
               required
             />
             <Input
-              label="Unit Price ($)"
+              label="Unit Price (FCFA)"
               type="number"
               value={formData.unitPrice}
               onChange={(e) => handleChange(idx, 'unitPrice', parseFloat(e.target.value) || 0)}

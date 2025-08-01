@@ -58,7 +58,7 @@ const SalesPage: React.FC = () => {
             <div>
               <h1 className="text-3xl font-bold text-white mb-2">Sales Management</h1>
               <p className="text-gray-400">
-                Track your sales and revenue • {sales.length} total sales • ${totalRevenue.toFixed(2)} revenue
+                Track your sales and revenue • {sales.length} total sales • {totalRevenue.toFixed(2)} FCFA revenue
               </p>
             </div>
             <Button icon={Plus} onClick={() => setIsNewSaleModalOpen(true)}>
@@ -72,7 +72,7 @@ const SalesPage: React.FC = () => {
           <StatCard
             title="Today's Sales"
             value={todaySales.length}
-            subtitle={`$${todaySales.reduce((sum, sale) => sum + sale.totalAmount, 0).toFixed(2)} revenue`}
+            subtitle={`FCFA ${todaySales.reduce((sum, sale) => sum + sale.totalAmount, 0).toFixed(2)} revenue`}
             color="cyan"
           />
           <StatCard
@@ -83,7 +83,7 @@ const SalesPage: React.FC = () => {
           />
           <StatCard
             title="Total Revenue"
-            value={`$${totalRevenue.toFixed(2)}`}
+            value={`FCFA ${totalRevenue.toFixed(2)}`}
             subtitle="All time earnings"
             color="green"
           />
@@ -124,7 +124,7 @@ const SalesPage: React.FC = () => {
         {/* Today's Gain Grid */}
         <div className="bg-gray-900 rounded-xl border border-cyan-500/30 p-6 mb-8">
           <h2 className="text-xl font-bold text-cyan-400 mb-2">Today's Gain</h2>
-          <div className="text-3xl font-bold text-white">${todayGain.toFixed(2)}</div>
+          <div className="text-3xl font-bold text-white">FCFA {todayGain.toFixed(2)}</div>
         </div>
 
         {/* Sales Table */}
@@ -175,7 +175,7 @@ const SalesPage: React.FC = () => {
                             <span className="text-sm text-white">{totalQuantity}</span>
                           </td>
                           <td className="px-6 py-4">
-                            <span className="text-sm font-medium text-green-400">${(sale.totalAmount ?? 0).toFixed(2)}</span>
+                            <span className="text-sm font-medium text-green-400">{`FCFA ${(sale.totalAmount ?? 0).toFixed(2)}`}</span>
                           </td>
                           <td className="px-6 py-4">
                             <div className="text-sm text-white">{sale.timestamp ? new Date(sale.timestamp).toLocaleDateString() : ''}</div>
@@ -210,9 +210,9 @@ const SalesPage: React.FC = () => {
                                           <td className="px-4 py-2">{item.id ?? '-'}</td>
                                           <td className="px-4 py-2">{item.name ?? '-'}</td>
                                           <td className="px-4 py-2">{item.quantity ?? '-'}</td>
-                                          <td className="px-4 py-2">${item.unitPrice?.toFixed(2) ?? '-'}</td>
-                                          <td className="px-4 py-2">${item.soldPrice?.toFixed(2) ?? '-'}</td>
-                                          <td className="px-4 py-2">${total}</td>
+                                          <td className="px-4 py-2">{item.unitPrice?.toFixed(2) ?? '-'} FCFA</td>
+                                          <td className="px-4 py-2">{item.soldPrice?.toFixed(2) ?? '-'} FCFA</td>
+                                          <td className="px-4 py-2">{total} FCFA</td>
                                         </tr>
                                       );
                                     })}
@@ -417,7 +417,7 @@ export const NewSaleModal: React.FC<{ isOpen: boolean; onClose: () => void; prod
                   <div className="flex justify-between items-center">
                     <div>
                       <div className="text-white font-medium">{product.name}</div>
-                      <div className="text-gray-400 text-sm">${product.unitPrice.toFixed(2)} 2 {product.quantity} available</div>
+                      <div className="text-gray-400 text-sm">{product.unitPrice.toFixed(2)} FCFA {product.quantity} available</div>
                     </div>
                     <Plus className="w-4 h-4 text-cyan-400" />
                   </div>
@@ -441,7 +441,7 @@ export const NewSaleModal: React.FC<{ isOpen: boolean; onClose: () => void; prod
                   <div key={item.name} className="flex items-center justify-between p-4 bg-gray-800 border border-gray-700 rounded-lg">
                     <div className="flex-1">
                       <div className="text-white font-medium">{item.name}</div>
-                      <div className="text-gray-400 text-sm">Unit Price: ${item.unitPrice.toFixed(2)}</div>
+                      <div className="text-gray-400 text-sm">Unit Price: {item.unitPrice.toFixed(2)} FCFA</div>
                       <div className="text-gray-400 text-sm">Sold Price: <input type="number" value={item.soldPrice} min={0} step={0.01} onChange={e => updateSoldPrice(item.name, parseFloat(e.target.value) || item.unitPrice)} className="w-20 px-2 py-1 bg-gray-700 border border-gray-600 rounded text-center text-white" /></div>
                     </div>
                     <div className="flex items-center space-x-3">
@@ -450,7 +450,7 @@ export const NewSaleModal: React.FC<{ isOpen: boolean; onClose: () => void; prod
                         <input type="number" value={item.quantity} onChange={(e) => updateItemQuantity(item.name, parseInt(e.target.value) || 1)} min={1} max={product?.quantity || 1} className="w-16 px-2 py-1 bg-gray-700 border border-gray-600 rounded text-center text-white" />
                         <button onClick={() => updateItemQuantity(item.name, item.quantity + 1)} className="w-8 h-8 bg-gray-700 hover:bg-gray-600 rounded text-white flex items-center justify-center">+</button>
                       </div>
-                      <div className="text-cyan-400 font-medium w-20 text-right">${item.totalPrice.toFixed(2)}</div>
+                      <div className="text-cyan-400 font-medium w-20 text-right">FCFA {item.totalPrice.toFixed(2)}</div>
                       <button onClick={() => removeItem(item.name)} className="text-red-400 hover:text-red-300 p-1"><Trash2 className="w-4 h-4" /></button>
                     </div>
                   </div>
@@ -465,7 +465,7 @@ export const NewSaleModal: React.FC<{ isOpen: boolean; onClose: () => void; prod
           <div className="border-t border-gray-700 pt-4">
             <div className="flex justify-between items-center text-lg font-semibold">
               <span className="text-white">Total Amount:</span>
-              <span className="text-cyan-400">${totalAmount.toFixed(2)}</span>
+              <span className="text-cyan-400">{`FCFA ${totalAmount.toFixed(2)}`}</span>
             </div>
           </div>
         )}
